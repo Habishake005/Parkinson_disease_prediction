@@ -1,10 +1,8 @@
 joblib==1.4.2
-numpy==1.26.4
-pandas==2.1.4
-parselmouth==1.4.3  # Newer version that doesn't have the googleads dependency
-scikit-learn==1.4.1.post1
+numpy==2.2.6
+pandas==2.2.3
+parselmouth==1.1.1
+scikit_learn==1.6.1
 streamlit==1.37.1
-tensorflow==2.16.1
-xgboost==2.0.3
-protobuf==3.20.3
-pydub==0.25.1
+tensorflow==2.19.0
+xgboost==3.0.2
