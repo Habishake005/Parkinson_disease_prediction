@@ -1,5 +1,5 @@
 import streamlit as st
-import parselmouth
+import librosa
 import numpy as np
 import gzip
 import pickle
@@ -52,30 +52,46 @@ meta_model = joblib.load('meta_model.joblib')
 
 # Feature extraction function
 def extract_features(file_path):
-    snd = parselmouth.Sound(file_path)
-    point_process = parselmouth.praat.call(snd, "To PointProcess (periodic, cc)", 75, 500)
-
-    jitter_local = parselmouth.praat.call(point_process, "Get jitter (local)", 0, 0, 0.0001, 0.02, 1.3)
-    jitter_local_abs = parselmouth.praat.call(point_process, "Get jitter (local, absolute)", 0, 0, 0.0001, 0.02, 1.3)
-    jitter_ppq5 = parselmouth.praat.call(point_process, "Get jitter (ppq5)", 0, 0, 0.0001, 0.02, 1.3)
-    jitter_ddp = parselmouth.praat.call(point_process, "Get jitter (ddp)", 0, 0, 0.0001, 0.02, 1.3)
-
-    shimmer_apq5 = parselmouth.praat.call([snd, point_process], "Get shimmer (apq5)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-    shimmer_apq11 = parselmouth.praat.call([snd, point_process], "Get shimmer (apq11)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-    shimmer_dda = parselmouth.praat.call([snd, point_process], "Get shimmer (dda)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-
-    harmonicity = snd.to_harmonicity_cc()
-    hnr = parselmouth.praat.call(harmonicity, "Get mean", 0, 0)
-    nhr = 1 / hnr if hnr != 0 else 0
-
+    y, sr = librosa.load(file_path, sr=None)
+    
+    # Zero Crossing Rate (mean)
+    zcr = np.mean(librosa.feature.zero_crossing_rate(y))
+    
+    # Root Mean Square Energy (mean)
+    rms = np.mean(librosa.feature.rms(y=y))
+    
+    # Spectral Centroid (mean)
+    spec_centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=sr))
+    
+    # Spectral Bandwidth (mean)
+    spec_bw = np.mean(librosa.feature.spectral_bandwidth(y=y, sr=sr))
+    
+    # Spectral Roll-off (mean)
+    rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=sr))
+    
+    # Harmonic-to-Noise Ratio (approx)
+    y_harmonic = librosa.effects.harmonic(y)
+    y_percussive = librosa.effects.percussive(y)
+    energy_harmonic = np.sum(y_harmonic ** 2)
+    energy_percussive = np.sum(y_percussive ** 2)
+    hnr = energy_harmonic / (energy_percussive + 1e-6)
+    
+    # MFCC mean of first 3 coefficients (to keep feature count low)
+    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=3)
+    mfccs_mean = np.mean(mfccs, axis=1)  # 3 features
+    
+    # rpde approximation, keep as 0.0 for consistency
     rpde = 0.0
-
-    features = np.array([
-        jitter_local, jitter_local_abs, jitter_ppq5, jitter_ddp,
-        shimmer_apq5, shimmer_apq11, shimmer_dda,
-        nhr, hnr, rpde
+    
+    features = np.hstack([
+        zcr, rms, spec_centroid, spec_bw, rolloff,
+        hnr,
+        mfccs_mean,
+        rpde
     ])
+    
     return features
+
 
 # Prediction function
 def predict_from_audio(file_path):
