@@ -1,4 +1,4 @@
-googleads==3.0.0
+git+https://github.com/tylertreat/google-ads-python3.git
 joblib==1.4.2
 numpy==2.2.6
 pandas==2.2.3
