@@ -1,6 +1,6 @@
 joblib==1.4.2
 numpy==2.2.6
-pandas==2.2.3
+pandas==1.5.3         # older pandas compatible with pytz==2015.7
 parselmouth==1.1.1
 scikit_learn==1.6.1
 streamlit==1.37.1
